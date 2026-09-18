@@ -91,6 +91,8 @@ Response:
 - Content-Type: image/jpeg | image/png | image/webp
 - Or it can be a signed download URL depending on the backend implementation.
 
+Workers generate a fixed 500x500 output using a center crop (`fit: cover`). This intentionally crops source images to make the transformation obvious during the demo.
+
 ### GET /api/system
 
 Returns the current autoscaler snapshot used by the dashboard:
@@ -140,3 +142,4 @@ type Job = {
 - Queue state and worker progress are backend-owned and should remain the source of truth.
 - The frontend only renders the current job state and exposes actions such as retry and result viewing.
 - The backend requires Redis at `REDIS_URL`; run the API with `npm run server` and optionally run additional `npm run worker` processes against the same queue.
+- Upload batches are briefly held while the autoscaler brings ready workers online. This makes worker assignment visible and prevents a fast first worker from claiming every small demo image before the scaled workers connect.

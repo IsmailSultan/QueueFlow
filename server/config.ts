@@ -15,6 +15,8 @@ export const config = {
   maxWorkers: numberFromEnv('MAX_WORKERS', 8),
   autoscaleIntervalMs: numberFromEnv('AUTOSCALE_INTERVAL_MS', 1500),
   workerIdleCooldownMs: numberFromEnv('WORKER_IDLE_COOLDOWN_MS', 10000),
+  slowProcessing: process.env.SLOW_PROCESSING === 'true',
+  processingDelayMs: numberFromEnv('PROCESSING_DELAY_MS', 750),
   uploadsDir: path.resolve(process.cwd(), 'uploads'),
   processedDir: path.resolve(process.cwd(), 'processed'),
 }

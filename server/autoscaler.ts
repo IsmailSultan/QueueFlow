@@ -11,7 +11,7 @@ export type WorkerSnapshot = {
   lastStateChangeAt: string
 }
 
-type ManagedWorker = WorkerSnapshot & { process: ChildProcess }
+type ManagedWorker = WorkerSnapshot & { process: ChildProcess; ready: boolean }
 
 const workerScript = fileURLToPath(new URL('./worker.ts', import.meta.url))
 const workers = new Map<string, ManagedWorker>()
@@ -41,9 +41,14 @@ const spawnWorker = () => {
     startedAt: now,
     lastStateChangeAt: now,
     process: child,
+    ready: false,
   }
   workers.set(id, worker)
   child.on('message', (message: unknown) => {
+    if (typeof message === 'object' && message !== null && 'ready' in message && message.ready === true) {
+      const current = workers.get(id)
+      if (current) current.ready = true
+    }
     if (
       typeof message === 'object' &&
       message !== null &&
@@ -54,6 +59,16 @@ const spawnWorker = () => {
     }
   })
   child.on('exit', () => workers.delete(id))
+}
+
+const waitForWorkers = async (targetCount: number) => {
+  while (workers.size < targetCount) {
+    spawnWorker()
+  }
+
+  while ([...workers.values()].some((worker) => !worker.ready)) {
+    await new Promise((resolve) => setTimeout(resolve, 25))
+  }
 }
 
 const stopIdleWorker = () => {
@@ -81,7 +96,7 @@ const reconcile = async () => {
 }
 
 export function getWorkerSnapshots() {
-  return [...workers.values()].map(({ process: _process, ...snapshot }) => snapshot)
+  return [...workers.values()].map(({ process: _process, ready: _ready, ...snapshot }) => snapshot)
 }
 
 export async function getAutoscalerState() {
@@ -101,6 +116,11 @@ export function startAutoscaler() {
     void reconcile().catch((error: unknown) => console.error('Autoscaler error:', error))
   }, config.autoscaleIntervalMs)
   void reconcile()
+}
+
+export async function ensureWorkerCapacity(jobCount: number) {
+  const target = Math.min(config.maxWorkers, Math.max(config.minWorkers, jobCount))
+  await waitForWorkers(target)
 }
 
 export async function stopAutoscaler() {

@@ -9,7 +9,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "server": "tsx server/server.ts",
-    "worker": "tsx server/worker.ts"
+    "worker": "tsx server/worker.ts",
+    "reset": "tsx server/reset.ts",
+    "demo": "powershell -ExecutionPolicy Bypass -File scripts/demo.ps1"
   },
   "dependencies": {
     "bullmq": "^6.3.6",

@@ -6,7 +6,12 @@ import multer from 'multer'
 import { config } from './config.js'
 import { queue, type ImageJobData } from './queue.js'
 import { findJob, listApiJobs, toApiJob } from './jobs.js'
-import { getAutoscalerState, startAutoscaler, stopAutoscaler } from './autoscaler.js'
+import {
+  ensureWorkerCapacity,
+  getAutoscalerState,
+  startAutoscaler,
+  stopAutoscaler,
+} from './autoscaler.js'
 
 await Promise.all([
   fs.mkdir(config.uploadsDir, { recursive: true }),
@@ -50,30 +55,37 @@ app.post('/api/jobs', upload.array('files', 50), async (request, response) => {
     return
   }
 
-  const jobs = await Promise.all(
-    files.map(async (file) => {
-      const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-      const outputPath = path.join(config.processedDir, `${jobId}-${file.originalname}`)
-      const data: ImageJobData = {
-        filename: file.originalname,
-        inputPath: file.path,
-        outputPath,
-      }
-      return queue.add('resize-image', data, {
-        jobId,
-        // Demo failures must remain failed until the user explicitly retries.
-        attempts:
-          config.demoFailureEnabled && file.originalname.toLowerCase().includes('fail')
-            ? 1
-            : 3,
-        backoff: { type: 'fixed', delay: 500 },
-        removeOnComplete: false,
-        removeOnFail: false,
-      })
-    }),
-  )
-
-  response.status(202).json(await Promise.all(jobs.map((job) => toApiJob(job))))
+  await queue.pause()
+  try {
+    await ensureWorkerCapacity(files.length)
+    const jobs = await Promise.all(
+      files.map(async (file) => {
+        const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+        const outputPath = path.join(config.processedDir, `${jobId}-${file.originalname}`)
+        const data: ImageJobData = {
+          filename: file.originalname,
+          inputPath: file.path,
+          outputPath,
+        }
+        return queue.add('resize-image', data, {
+          jobId,
+          // Demo failures must remain failed until the user explicitly retries.
+          attempts:
+            config.demoFailureEnabled && file.originalname.toLowerCase().includes('fail')
+              ? 1
+              : 3,
+          backoff: { type: 'fixed', delay: 500 },
+          removeOnComplete: false,
+          removeOnFail: false,
+        })
+      }),
+    )
+    await queue.resume()
+    response.status(202).json(await Promise.all(jobs.map((job) => toApiJob(job))))
+  } catch (error) {
+    await queue.resume()
+    throw error
+  }
 })
 
 app.post('/api/jobs/:id/retry', async (request, response) => {
