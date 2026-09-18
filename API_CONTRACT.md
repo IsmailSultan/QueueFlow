@@ -91,6 +91,29 @@ Response:
 - Content-Type: image/jpeg | image/png | image/webp
 - Or it can be a signed download URL depending on the backend implementation.
 
+### GET /api/system
+
+Returns the current autoscaler snapshot used by the dashboard:
+
+```json
+{
+  "queueDepth": 4,
+  "activeWorkerCount": 2,
+  "workerCount": 3,
+  "activeJobs": 2,
+  "workers": [
+    {
+      "id": "worker-1",
+      "status": "processing",
+      "startedAt": "2026-09-18T10:00:00.000Z",
+      "lastStateChangeAt": "2026-09-18T10:01:00.000Z"
+    }
+  ]
+}
+```
+
+The local autoscaler starts workers up to `MAX_WORKERS` as waiting jobs increase. It only asks workers with `idle` status to shut down, and only after `WORKER_IDLE_COOLDOWN_MS`; a worker reporting `processing` is never selected for scale-down.
+
 ## Job shape
 
 ```ts
@@ -116,3 +139,4 @@ type Job = {
 - The frontend does not perform resizing in the browser.
 - Queue state and worker progress are backend-owned and should remain the source of truth.
 - The frontend only renders the current job state and exposes actions such as retry and result viewing.
+- The backend requires Redis at `REDIS_URL`; run the API with `npm run server` and optionally run additional `npm run worker` processes against the same queue.

@@ -1,4 +1,4 @@
-import { apiRequest, isMockMode } from './client'
+import { apiRequest, API_BASE_URL, isMockMode } from './client'
 import {
   createMockJobs,
   getMockJob,
@@ -23,6 +23,21 @@ export type Job = {
   error: string | null
 }
 
+export type WorkerSnapshot = {
+  id: string
+  status: 'idle' | 'processing'
+  startedAt: string
+  lastStateChangeAt: string
+}
+
+export type SystemStatus = {
+  queueDepth: number
+  activeWorkerCount: number
+  workerCount: number
+  activeJobs: number
+  workers: WorkerSnapshot[]
+}
+
 export async function createJobs(files: File[]): Promise<Job[]> {
   if (isMockMode()) {
     return createMockJobs(files)
@@ -43,6 +58,27 @@ export async function getJobs(): Promise<Job[]> {
   }
 
   return apiRequest<Job[]>('/api/jobs')
+}
+
+export async function getSystemStatus(): Promise<SystemStatus> {
+  if (isMockMode()) {
+    return {
+      queueDepth: 1,
+      activeWorkerCount: 1,
+      workerCount: 1,
+      activeJobs: 1,
+      workers: [
+        {
+          id: 'worker-demo',
+          status: 'processing',
+          startedAt: new Date().toISOString(),
+          lastStateChangeAt: new Date().toISOString(),
+        },
+      ],
+    }
+  }
+
+  return apiRequest<SystemStatus>('/api/system')
 }
 
 export async function getJob(jobId: string): Promise<Job> {
@@ -80,7 +116,7 @@ export async function getJobResult(jobId: string): Promise<string> {
     return getMockJobResult(jobId)
   }
 
-  const response = await fetch(`${import.meta.env.VITE_API_URL ?? ''}/api/jobs/${jobId}/result`)
+  const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/result`)
 
   if (!response.ok) {
     throw new Error('The processed image is not available.')

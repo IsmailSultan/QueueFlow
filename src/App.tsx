@@ -1,6 +1,15 @@
 import { type ChangeEvent, type DragEvent, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import { createJobs, getJobs, getJobResult, retryJob, type Job, type JobStatus } from './api/jobs'
+import {
+  createJobs,
+  getJobs,
+  getJobResult,
+  getSystemStatus,
+  retryJob,
+  type Job,
+  type JobStatus,
+  type SystemStatus,
+} from './api/jobs'
 
 type SelectedFile = {
   id: string
@@ -40,6 +49,7 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([])
   const [jobs, setJobs] = useState<Job[]>([])
+  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingJobs, setIsLoadingJobs] = useState(true)
@@ -52,6 +62,7 @@ function App() {
       setIsLoadingJobs(true)
       const nextJobs = await getJobs()
       setJobs(nextJobs)
+      setSystemStatus(await getSystemStatus())
     } catch (jobError) {
       setError(
         jobError instanceof Error
@@ -68,7 +79,7 @@ function App() {
 
     const intervalId = window.setInterval(() => {
       void refreshJobs()
-    }, 15000)
+    }, 1500)
 
     return () => window.clearInterval(intervalId)
   }, [])
@@ -310,6 +321,35 @@ function App() {
                   <div className="summary-value">{item.value}</div>
                 </div>
               ))}
+            </div>
+          </section>
+
+          <section className="content-block workers-block">
+            <div className="mini-header worker-header">
+              <div>
+                <h2>Worker Fleet</h2>
+                <p className="fleet-caption">
+                  {systemStatus?.queueDepth ?? 0} queued · {systemStatus?.workerCount ?? 0} workers
+                </p>
+              </div>
+              <span className="fleet-count">
+                {systemStatus?.activeWorkerCount ?? 0} active
+              </span>
+            </div>
+
+            <div className="worker-list">
+              {systemStatus?.workers.map((worker) => (
+                <div className="worker-card" key={worker.id}>
+                  <span className={`worker-state-dot ${worker.status}`} aria-hidden="true" />
+                  <span className="worker-id">{worker.id}</span>
+                  <span className={`worker-state ${worker.status}`}>
+                    {worker.status}
+                  </span>
+                </div>
+              ))}
+              {!systemStatus?.workers.length ? (
+                <div className="empty-state">Waiting for the autoscaler...</div>
+              ) : null}
             </div>
           </section>
 

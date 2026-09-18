@@ -315,6 +315,76 @@
   color: #0f172a;
 }
 
+.worker-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.fleet-caption {
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.fleet-count {
+  color: #166534;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.worker-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.worker-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.worker-state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.worker-state-dot.idle {
+  background: #94a3b8;
+}
+
+.worker-state-dot.processing {
+  background: #2563eb;
+}
+
+.worker-id {
+  color: #0f172a;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.8rem;
+}
+
+.worker-state {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.worker-state.idle {
+  color: #64748b;
+}
+
+.worker-state.processing {
+  color: #2563eb;
+}
+
 .jobs-table-wrap {
   border: 1px solid #e2e8f0;
   border-radius: 14px;
